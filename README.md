@@ -1,4 +1,3 @@
-2024 Group 02 project
 # Table of contents
 - [Introduction](#introduction)
 - [Setup](#setup)
@@ -61,3 +60,6 @@ If any unprecedented behaviour is exhibited  by the software, a feature with a b
 Each merge request needs to be assigned to a team member, and a code review to be conducted before merging
 
 Each commit message needs to be descriptive enough about what was changed followed by the issue number. For example ````git commit -m "added feature #2"```` 
+
+# License
+* This project is released under the terms of the GNU GPLv3 License
