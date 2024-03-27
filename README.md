@@ -4,6 +4,7 @@
     - [Environment](#environment)
     - [Cloning and building the project](#cloning-the-project)
 - [Team coordination](#team-coordination)
+- [License](#license)
 
 # Introduction
 
