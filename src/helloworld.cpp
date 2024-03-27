@@ -2,6 +2,7 @@
 #include "PrimeChecker.hpp"
 
 int main(int argc, char** argv) {
+    //checking if there are exactly 2 arguments
     if (argc == 2) {
         int number = std::stoi(argv[1]);
         PrimeChecker pc;
