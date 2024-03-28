@@ -8,7 +8,8 @@ int main(int argc, char** argv) {
         int number = std::stoi(argv[1]);
         //create an object
         PrimeChecker pc;
-        std::cout << "Altinisik, Mehmet Asim" << number << " is a prime number? " << pc.isPrime(number) << std::endl;
+        // Prints the result of the prime number check for the given number.
+        std::cout << "Latos, Georgios" << number << " is a prime number? " << pc.isPrime(number) << std::endl;
     }
     return 0;
 }
