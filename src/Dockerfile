@@ -1,28 +1,32 @@
-# Use a minimal base image for the builder stage
-FROM alpine:latest AS builder
+##################################################
+# Section 1: Build the application
+FROM ubuntu:22.04 as builder
 
-# Install necessary packages for building
-RUN apk --no-cache add \
-    cmake \
-    g++ \
-    make
+RUN apt-get update -y && \
+    apt-get upgrade -y && \
+    apt-get dist-upgrade -y
 
-# Copy source code directly from root directory, removed opt/sources
-COPY . .
+RUN apt-get install -y --no-install-recommends \
+        cmake \
+        build-essential
 
-# Build the application using static linking and strip debug symbols from the binary
-RUN mkdir build && \
+ADD . /opt/sources
+WORKDIR /opt/sources
+
+RUN cd /opt/sources && \
+    mkdir build && \
     cd build && \
-    cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXE_LINKER_FLAGS="-static" .. && \
-    make && \
-    strip --strip-all helloworld && \
-    cp helloworld /tmp
+    cmake -D CMAKE_BUILD_TYPE=Release .. && \
+    make && make test && cp helloworld /tmp
 
-# Use a empty base image for the final stage
-FROM scratch
+##################################################
+# Section 2: Bundle the application.
+FROM ubuntu:22.04
 
-# Copy the built binary from the builder stage
-COPY --from=builder /tmp/helloworld /
+RUN apt-get update -y && \
+    apt-get upgrade -y && \
+    apt-get dist-upgrade -y
 
-# Set the entry point
-ENTRYPOINT ["/helloworld"]
+WORKDIR /opt
+COPY --from=builder /tmp/helloworld .
+ENTRYPOINT ["/opt/helloworld"]
