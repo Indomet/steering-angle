@@ -6,6 +6,8 @@ RUN apk --no-cache add \
     g++ \
     make
 
+WORKDIR /src
+
 # Copy source code directly from root directory, removed opt/sources
 COPY . .
 
