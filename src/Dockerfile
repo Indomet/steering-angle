@@ -17,7 +17,7 @@ COPY src /app/src
 RUN mkdir build && \
     cd build && \
     cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXE_LINKER_FLAGS="-static" ../src && \
-    make && \
+    make && make test && \
     strip --strip-all helloworld && \
     cp helloworld /tmp
 
