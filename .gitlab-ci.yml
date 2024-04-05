@@ -1,5 +1,5 @@
 # Which Docker image shall be used on the GitLab runner?
-image: docker:19.03.3
+image: ubuntu:latest
 
 # Details about how to connect to the Docker service to run this build.
 variables:
@@ -7,7 +7,7 @@ variables:
   DOCKER_TLS_CERTDIR: ""
 
 services:
-  - name: docker:19.03.3-dind
+  - name: docker:stable-dind
 
 stages:
   - build
@@ -21,7 +21,7 @@ before_script:
 # This section describes what shall be done to build and test the project.
 build-and-test:
   tags:
-    - docker
+    - docker-build
   stage: build
   script:
     - docker build -f src/Dockerfile .
