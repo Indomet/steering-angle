@@ -1,32 +1,27 @@
-##################################################
-# Section 1: Build the application
-FROM ubuntu:22.04 as builder
+FROM alpine:latest AS builder
 
-RUN apt-get update -y && \
-    apt-get upgrade -y && \
-    apt-get dist-upgrade -y
+# Install necessary packages for building
+RUN apk --no-cache add \
+    cmake \
+    g++ \
+    make
 
-RUN apt-get install -y --no-install-recommends \
-        cmake \
-        build-essential
+# Copy source code directly from root directory, removed opt/sources
+COPY . .
 
-ADD . /opt/sources
-WORKDIR /opt/sources
-
-RUN cd /opt/sources && \
-    mkdir build && \
+# Build the application using static linking and strip debug symbols from the binary
+RUN mkdir build && \
     cd build && \
-    cmake -D CMAKE_BUILD_TYPE=Release .. && \
-    make && make test && cp helloworld /tmp
+    cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXE_LINKER_FLAGS="-static" .. && \
+    make && \
+    strip --strip-all helloworld && \
+    cp helloworld /tmp
 
-##################################################
-# Section 2: Bundle the application.
-FROM ubuntu:22.04
+# Use a empty base image for the final stage
+FROM scratch
 
-RUN apt-get update -y && \
-    apt-get upgrade -y && \
-    apt-get dist-upgrade -y
+# Copy the built binary from the builder stage
+COPY --from=builder /tmp/helloworld /
 
-WORKDIR /opt
-COPY --from=builder /tmp/helloworld .
-ENTRYPOINT ["/opt/helloworld"]
+# Set the entry point
+ENTRYPOINT ["/helloworld"]
