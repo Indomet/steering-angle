@@ -5,7 +5,8 @@ FROM alpine:latest AS builder
 RUN apk --no-cache add \
     cmake \
     g++ \
-    make
+    make \
+    ctest
 
 # Create a directory for the app
 WORKDIR /app
