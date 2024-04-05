@@ -1,22 +1,22 @@
 # Which Docker image shall be used on the GitLab runner?
-image: ubuntu:latest
+image: docker:latest
 
 # Details about how to connect to the Docker service to run this build.
-variables:
-  DOCKER_HOST: tcp://docker:2375
-  DOCKER_TLS_CERTDIR: ""
+# variables:
+#   DOCKER_HOST: tcp://docker:2375
+#   DOCKER_TLS_CERTDIR: ""
 
 services:
-  - name: docker:stable-dind
+  - docker:dind
 
 stages:
   - build
-  - deploy
+  # - deploy
 
 # Display information before we start the build.
-before_script:
-  - docker info
-  - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+# before_script:
+#   - docker info
+#   - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
 
 # This section describes what shall be done to build and test the project.
 build-and-test:
@@ -27,10 +27,10 @@ build-and-test:
     - docker build -f src/Dockerfile .
 
 # This section describes what shall be done to deploy artefacts from the project.
-release:
-  tags:
-    - docker-build
-  stage: deploy
-  script:
-    - docker build -f Dockerfile -t "$CI_REGISTRY_IMAGE":"$CI_COMMIT_TAG" .
-    - docker push "$CI_REGISTRY_IMAGE":"$CI_COMMIT_TAG"
+# release:
+#   tags:
+#     - docker-build
+#   stage: deploy
+#   script:
+#     - docker build -f Dockerfile -t "$CI_REGISTRY_IMAGE":"$CI_COMMIT_TAG" .
+#     - docker push "$CI_REGISTRY_IMAGE":"$CI_COMMIT_TAG"
