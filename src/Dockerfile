@@ -1,3 +1,4 @@
+# Use a suitable base image for the builder stage
 FROM alpine:latest AS builder
 
 # Install necessary packages for building
@@ -6,10 +7,12 @@ RUN apk --no-cache add \
     g++ \
     make
 
-WORKDIR /src
+# Create a directory for the app
+WORKDIR /app
 
-# Copy source code directly from root directory, removed opt/sources
-COPY . .
+# Copy only the necessary files needed for the build process
+COPY CMakeLists.txt ./
+COPY src ./src
 
 # Build the application using static linking and strip debug symbols from the binary
 RUN mkdir build && \
@@ -19,11 +22,11 @@ RUN mkdir build && \
     strip --strip-all helloworld && \
     cp helloworld /tmp
 
-# Use a empty base image for the final stage
+# Use a minimal base image for the final stage
 FROM scratch
 
 # Copy the built binary from the builder stage
-COPY --from=builder /tmp/helloworld /
+COPY --from=builder /tmp/helloworld /helloworld
 
 # Set the entry point
 ENTRYPOINT ["/helloworld"]
