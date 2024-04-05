@@ -6,15 +6,6 @@
 TEST_CASE("Test PrimeChecker 1.") {
     PrimeChecker pc;
     REQUIRE(pc.isPrime(5));
-}
-
-TEST_CASE("Test PrimeChecker 2.") {
-    PrimeChecker pc;
     REQUIRE_FALSE(pc.isPrime(4));
-}
-
-// This test case should fail
-TEST_CASE("Test PrimeChecker 3.") {
-    PrimeChecker pc;
-    REQUIRE(pc.isPrime(4));
+    REQUIRE(pc.isPrime(4)); // This test case should fail
 }
