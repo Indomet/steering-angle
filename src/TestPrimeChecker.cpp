@@ -5,7 +5,16 @@
 
 TEST_CASE("Test PrimeChecker 1.") {
     PrimeChecker pc;
-    REQUIRE(pc.isPrime(5));
-    REQUIRE_FALSE(pc.isPrime(4));
-    REQUIRE(pc.isPrime(4)); // This test case should fail
+    REQUIRE(pc.isPrime(2)); // 2 is a prime number
+}
+
+TEST_CASE("Test PrimeChecker 2.") {
+    PrimeChecker pc;
+    REQUIRE(pc.isPrime(3)); // 3 is a prime number
+}
+
+// This test case should fail
+TEST_CASE("Test PrimeChecker 3.") {
+    PrimeChecker pc;
+    REQUIRE(pc.isPrime(4)); // 4 is not a prime number
 }
