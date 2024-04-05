@@ -5,8 +5,7 @@ FROM alpine:latest AS builder
 RUN apk --no-cache add \
     cmake \
     g++ \
-    make \
-    ctest
+    make
 
 # Create a directory for the app
 WORKDIR /app
@@ -19,8 +18,7 @@ RUN mkdir build && \
     cd build && \
     cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXE_LINKER_FLAGS="-static" ../src && \
     make && \
-    make test && \
-    ctest --rerun-failed --output-on-failure && \
+    make test || ctest --rerun-failed --output-on-failure && \
     strip --strip-all helloworld && \
     cp helloworld /tmp
 
