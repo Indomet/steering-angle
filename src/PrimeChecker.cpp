@@ -2,15 +2,18 @@
 
 bool PrimeChecker::isPrime(uint16_t n) {
     bool retVal { true };
-    if (n < 2 || 0 == n % 2) {
-        retVal = false;
+    if (n < 2) {
+        return false;
+    } else if (n == 2) {
+        return true;
+    } else if (n % 2 == 0) {
+        return false;
     } else {
         for (uint16_t i { 3 }; (i * i) <= n; i += 2) {
-            if (0 == n % i) {
+            if (n % i == 0) {
                 return false;
-                break;
             }
         }
     }
-    return retVal;
+    return true;
 }
