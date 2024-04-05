@@ -10,14 +10,13 @@ RUN apk --no-cache add \
 # Create a directory for the app
 WORKDIR /app
 
-# Copy only the necessary files needed for the build process
-COPY CMakeLists.txt ./
-COPY src ./src
+# Copy the entire src directory
+COPY src /app/src
 
 # Build the application using static linking and strip debug symbols from the binary
 RUN mkdir build && \
     cd build && \
-    cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXE_LINKER_FLAGS="-static" .. && \
+    cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXE_LINKER_FLAGS="-static" ../src && \
     make && \
     strip --strip-all helloworld && \
     cp helloworld /tmp
