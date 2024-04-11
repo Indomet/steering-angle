@@ -29,3 +29,20 @@ Group conflicts will be handled case by case where the entire team reviews the i
 
 All team members shall be skeptical by default for any output of any LLMs as
 it may be hallucinating. Whenever an LLM is used inside of code there must be a comment indicating that the code was AI generated for transparency reasons.
+
+### Our group policy for using LLM will allow for the following:
+* Prompting ideas/tools to use
+* Prompting code when one is not sure of the approach or syntax
+* Copying generated code snippets (with careful review and understanding, rather than blindly copying)
+* Generating code comments
+
+### Ensuring transparency and traceability with the use of LLM:
+* All usage of LLM must be indicated with a note to ensure transparency.
+* All usage of LLM where generated code was used must additionally include citation to the LLM discussion.
+* Generated code must be verified with external sources.
+* The name and version of the LLM used must be included in each note.
+* The entire conversations with LLMs shall be either saved as separate text files or as shared links if available.
+
+<div align="center">
+    <img src="https://cdn.discordapp.com/attachments/1014494757763948624/1227648691943505960/image.png?ex=66292bf0&is=6616b6f0&hm=797abc8e054614c096dae4ac51dc74f75a36d81da33f3677f26fd19c0d8d71c3&" alt="example">
+</div>
