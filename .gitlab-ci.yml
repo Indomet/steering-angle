@@ -19,8 +19,8 @@ before_script:
   - docker info
   - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
   #- apt-get -qq update && apt-get -qq install -y lcov
-  - apt update && apt -y install make autoconf gcc g++
-  - apt install g++
+  - apt-get && apt-get -y install make autoconf gcc g++
+  - apt-get install g++
   - apt-get update && apt-get install -y gcc 
 
 # This section describes what shall be done to build and test the project.
