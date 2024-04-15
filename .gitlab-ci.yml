@@ -41,7 +41,7 @@ code-cover:
 
   script:
     #- apk add cmake make g++ gcovr
-    - cd /src
+    - cd src
     - mkdir build
     - cd build
     - cmake ..
