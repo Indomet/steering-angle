@@ -53,10 +53,13 @@ code-cover:
   #https://docs.gitlab.com/ee/ci/testing/test_coverage_visualization.html
   artifacts:
     name: ${CI_JOB_NAME}-${CI_COMMIT_REF_NAME}-${CI_COMMIT_SHA}
+    paths:
+      - src/public
     reports:
       coverage_report:
         coverage_format: cobertura
         path: src/public/coverage.xml
+        
   
 # This section describes what shall be done to deploy artefacts from the project.
 release:
