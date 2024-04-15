@@ -31,8 +31,7 @@ code-cover:
   stage: build
   before_script: 
     - apt update && apt -y install make autoconf gcc g++
-    - docker info
-    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+
   script:
     - apk add cmake make g++ gcovr
     - mkdir build
