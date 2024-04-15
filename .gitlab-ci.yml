@@ -50,7 +50,7 @@ code-cover:
     - cd ..
     - mkdir public
     - gcovr --xml-pretty --exclude-unreachable-branches --print-summary --html-details public/report.html -o public/coverage.xml --root ${CI_PROJECT_DIR}/src
-    - gcovr --txt --exclude src/catch.hpp
+    - gcovr --txt --exclude catch.hpp
   #https://docs.gitlab.com/ee/ci/testing/test_coverage_visualization.html
   artifacts:
     name: ${CI_JOB_NAME}-${CI_COMMIT_REF_NAME}-${CI_COMMIT_SHA}
