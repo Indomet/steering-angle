@@ -9,7 +9,7 @@ int main(int argc, char** argv) {
         //create an object
         PrimeChecker pc;
         // Prints the result of the prime number check for the given number.
-        std::cout << "Latos, Georgios" << number << " is a prime number? " << pc.isPrime(number) << std::endl;
+        std::cout << "Maybe" << number << " is a prime number? " << pc.isPrime(number) << std::endl;
     }
     return 0;
 }
