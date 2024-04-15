@@ -34,8 +34,8 @@ code-cover:
   before_script: 
     - apt update && apt -y install make autoconf gcc g++
     - apt-get update
-    - apt-get upgrade
-    - apt-get install build-essential cmake gcovr
+    - apt-get -y upgrade 
+    - apt-get -y install build-essential cmake gcovr
     
 
   script:
