@@ -27,13 +27,17 @@ build-and-test:
     - docker build -f src/Dockerfile .
     
 code-cover:
-  image: alpine:latest
+  image: ubuntu:latest
   stage: build
   before_script: 
     - apt update && apt -y install make autoconf gcc g++
+    - apt-get update
+    - apt-get upgrade
+    - apt-get install build-essential cmake gcovr
+    
 
   script:
-    - apk add cmake make g++ gcovr
+    #- apk add cmake make g++ gcovr
     - mkdir build
     - cd build
     - cmake ..
