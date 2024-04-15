@@ -49,7 +49,7 @@ code-cover:
     - make test
     - cd ..
     - mkdir public
-    - gcovr --xml-pretty --exclude-unreachable-branches --print-summary --html-details public/report.html -o public/coverage.xml --root ${CI_PROJECT_DIR}
+    - gcovr --xml-pretty --exclude-unreachable-branches --print-summary --html-details public/report.html -o public/coverage.xml --root ${CI_PROJECT_DIR}/src
 
 # This section describes what shall be done to deploy artefacts from the project.
 release:
