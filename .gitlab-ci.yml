@@ -56,7 +56,7 @@ code-cover:
     reports:
       coverage_report:
         coverage_format: cobertura
-        path: build/coverage.xml
+        path: src/build/coverage.xml
   
 # This section describes what shall be done to deploy artefacts from the project.
 release:
