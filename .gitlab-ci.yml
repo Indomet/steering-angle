@@ -11,6 +11,7 @@ services:
 
 stages:
   - build
+  - test
   - deploy
 
 # Display information before we start the build.
@@ -22,9 +23,20 @@ before_script:
 build-and-test:
   tags:
     - docker-build
-  stage: build
+  stage: test
   script:
     - docker build -f src/Dockerfile .
+    # Compile your C++ code with coverage flags
+    - g++ -fprofile-arcs -ftest-coverage -o test_executable src/TestPrimeChecker.cpp
+    # Run your tests
+    - ./test_executable
+    # Generate code coverage report using lcov
+    - lcov --capture --directory . --output-file coverage.info
+    - lcov --remove coverage.info '/usr/*' --output-file coverage.info # Exclude system headers
+    - lcov --list coverage.info # Optional: print coverage summary to console
+  artifacts:
+    paths:
+      - coverage.info # Publish coverage report as an artifact
 
 # This section describes what shall be done to deploy artefacts from the project.
 release:
