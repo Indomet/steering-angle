@@ -27,6 +27,8 @@ build-and-test:
     - docker build -f src/Dockerfile .
     
 code-cover:
+  tags:
+    - docker
   image: ubuntu:latest
   stage: build
   before_script: 
