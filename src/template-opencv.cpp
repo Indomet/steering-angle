@@ -25,9 +25,22 @@
 // Include the GUI and image processing header files from OpenCV
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
-
-cv::Mat hsv_filter(cv::Mat& img);
+#include <vector>
 cv::Mat detect_cones(cv::Mat& img);
+cv::Mat get_roi(cv::Mat& img);
+cv::Mat get_hsv(cv::Mat& img,cv::Scalar lower_bounds, cv::Scalar upper_bounds);
+cv::Mat find_conts(cv::Mat& hsv_roi_img,cv::Mat& og_img);
+
+#define LEN_CONES 2
+
+const cv::Scalar LOWER_BLUE = cv::Scalar(88,76,0);
+const cv::Scalar HIGHER_BLUE = cv::Scalar(141,255,255);
+const cv::Scalar LOWER_YELLOW = cv::Scalar(15,100,68);
+const cv::Scalar HIGHER_YELLOW = cv::Scalar(30,255,255);
+
+
+const std::vector <cv::Scalar> LOWER_BOUNDS = {LOWER_BLUE,LOWER_YELLOW};
+const std::vector <cv::Scalar> UPPER_BOUNDS = {HIGHER_BLUE,HIGHER_YELLOW};
 
 int32_t main(int32_t argc, char** argv) {
     int32_t retCode { 1 };
@@ -83,34 +96,11 @@ int32_t main(int32_t argc, char** argv) {
                     cv::Mat wrapped(HEIGHT, WIDTH, CV_8UC4, sharedMemory->data());
                     img = wrapped.clone();
                 }
-                img = hsv_filter(img);
-                // TODO: Here, you can add some code to check the sampleTimePoint when the current frame was captured.
+                img = detect_cones(img);
 
                 // auto sampleTimePoint = sharedMemory->getTimeStamp();
                 sharedMemory->unlock();
 
-                // int64_t timeMs = cluon::time::toMicroseconds(sampleTimePoint.second);
-                // std::string timeMsStr = std::to_string(timeMs);
-
-                // auto now = std::chrono::system_clock::now();
-                // std::time_t date = std::chrono::system_clock::to_time_t(now);
-                // std::tm* dateUTC = std::gmtime(&date);
-                // std::stringstream ss;
-                // ss << std::put_time(dateUTC, "%Y-%m-%dT%H:%M:%SZ"); // ISO 8601 format
-                // std::string dateStr = ss.str();
-
-                // TODO: Do something with the frame.
-
-                // Example: Draw a red rectangle and display image.
-
-                // cv::rectangle(img, cv::Point(50, 50), cv::Point(100, 100), cv::Scalar(0, 0, 255));
-                // cv::putText(img,
-                //     "Now: " + dateStr + "; ts: " + timeMsStr + "; Zhao, Zepei",
-                //     cv::Point(20, 40), // text position
-                //     cv::FONT_HERSHEY_DUPLEX,
-                //     0.5, // font size
-                //     cv::Scalar(255, 255, 255), // text color
-                //     1); // line width
 
                 // If you want to access the latest received ground steering, don't forget to lock the mutex:
                 {
@@ -131,99 +121,50 @@ int32_t main(int32_t argc, char** argv) {
     return retCode;
 }
 
-cv::Mat hsv_filter(cv::Mat& img) {
-    // Convert the image from BGR to HSV color space
-    cv::Mat imgHSV;
-    cv::cvtColor(img, imgHSV, CV_BGR2HSV);
-    int minHue = 106;
-    int maxHue = 138;
 
-    int minSaturation = 100;
-    int maxSaturation = 255;
+cv::Mat detect_cones(cv::Mat& img){
 
-    int minValue = 30;
-    int maxValue = 90;
-    // Define your min and max HSV values
-    cv::Scalar minHSV = cv::Scalar(minHue, minSaturation, minValue);
-    cv::Scalar maxHSV = cv::Scalar(maxHue, maxSaturation, maxValue);
+    for (int i=0; i < LEN_CONES; i++){
+        cv::Mat roi = get_roi(img);
+        cv::Mat hsv = get_hsv(roi,LOWER_BOUNDS.at(i),UPPER_BOUNDS.at(i));
+        img = find_conts(hsv,img);
+    }
+    return img;
 
-    // Create a mask based on the min and max HSV values
-    cv::Mat mask;
-    cv::inRange(imgHSV, minHSV, maxHSV, mask);
-
-    // Apply the mask to the HSV image
-    cv::Mat hsvResult;
-    cv::bitwise_and(imgHSV, imgHSV, hsvResult, mask);
-
-    // Split the HSV image into H, S, and V channels
-    cv::Mat grayscale;
-    cv::cvtColor(hsvResult, grayscale, cv::COLOR_BGR2GRAY);
-
-    // Apply a threshold to the grayscale image
-    cv::Mat thresholded;
-    double thresholdValue = minValue; // Set this to the desired threshold value
-    cv::threshold(grayscale, thresholded, thresholdValue, 255, cv::THRESH_BINARY);
-
-    cv::Mat temp = detect_cones(thresholded);
-
-    return temp;
+}
+cv::Mat get_roi(cv::Mat& img){
+    cv::Mat region (img, cv::Rect(0,(int)img.rows*0.55,img.cols,(int)img.rows*0.28));
+    return region;
 }
 
-cv::Mat detect_cones(cv::Mat& img) {
 
-    cv::Mat imgCopy = img.clone();
-    // Convert imgCopy to BGR color space
-    cv::cvtColor(imgCopy, imgCopy, cv::COLOR_GRAY2BGR);
+cv::Mat get_hsv(cv::Mat& img,cv::Scalar lower_bounds, cv::Scalar upper_bounds){
 
-    std::vector<std::vector<cv::Point>> contours;
-    std::vector<cv::Vec4i> hierarchy;
+    cv::Mat hsv_img;
+    cv::cvtColor(img,hsv_img,cv::COLOR_BGR2HSV);
 
-    // Define the region of interest (ROI)
-    cv::Rect roi(0, img.rows * 0.3, img.cols, img.rows * 0.7);
+    cv::Mat mask;
+    cv::inRange(hsv_img,lower_bounds,upper_bounds,mask);
 
-    // Create a new image from the ROI
-    cv::Mat imgROI = img(roi);
+    return mask;
+}
 
-    // Find contours in the ROI
-    cv::findContours(imgROI, contours, hierarchy, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
-    std::cout << "Number of contours found: " << contours.size() << std::endl;
+cv::Mat find_conts(cv::Mat& hsv_roi_img,cv::Mat& og_img){
+    cv::Mat canny_output;
+    cv::Canny(hsv_roi_img, canny_output, 50, 150 );
 
-    double minDistance = std::numeric_limits<double>::max(); // Initialize minDistance to a large value
-    int closestContourIndex = -1;
+    std::vector<std::vector<cv::Point> > contours;
+    findContours(canny_output, contours, cv::RETR_TREE, cv::CHAIN_APPROX_SIMPLE );
 
-    int x = img.cols / 2; // Middle of the image
-    int y = img.rows * 0.95; // 95% from the top of the image
+    //now we have all the contours now we need to draw them and display them
+    for(size_t  i=0; i< contours.size(); i++){
+        cv::Rect bounding_rect = cv::boundingRect(contours[i]);
+        //add back the cropped image height to the y coordinate
+        bounding_rect.y += (int)og_img.rows*0.5;
 
-    cv::Point targetPoint(x, y); // Define your target point
-
-    for (int i = 0; i < contours.size(); i++) {
-        cv::Rect boundingRect = cv::boundingRect(contours[i]);
-        cv::Point center = (boundingRect.br() + boundingRect.tl()) * 0.5;
-        double distance = cv::norm(targetPoint - center);
-
-        if (distance < minDistance && contours[i].size() > 40) {
-            minDistance = distance;
-            closestContourIndex = i;
-        }
+        cv::rectangle(og_img,bounding_rect,cv::Scalar(0,0,255),2,cv::LINE_8);
+        
     }
-
-    if (closestContourIndex != -1) {
-        cv::Rect boundingRect = cv::boundingRect(contours[closestContourIndex]);
-        // Adjust the position of the rectangle based on the ROI
-        boundingRect.y += img.rows * 0.3;
-        cv::rectangle(imgCopy, boundingRect, cv::Scalar(0, 255, 0), 2);
-    }
-
-    /*for (const auto& contour : contours) {
-        std::cout << "Size of contour: " << contour.size() << std::endl;
-
-        // Calculate the bounding rectangle for each contour
-        if (contour.size() > 35) {
-            cv::Rect boundingRect = cv::boundingRect(contour);
-
-            // Draw the bounding rectangle on the original image
-            cv::rectangle(imgCopy, boundingRect, cv::Scalar(0, 255, 0), 2);
-        }
-    }*/
-    return imgCopy;
+    return og_img;
+    
 }
