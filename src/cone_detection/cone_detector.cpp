@@ -53,7 +53,6 @@ void find_conts(cv::Mat& hsv_roi_img,cv::Mat& og_img){
     findContours(canny_output, contours, cv::RETR_TREE, cv::CHAIN_APPROX_SIMPLE );
 
     cv::Rect closest;
-    cv::Rect second_closest;
 
     //now we have all the contours now we need to draw them and display them
     for(size_t  i=0; i< contours.size(); i++){
@@ -62,17 +61,12 @@ void find_conts(cv::Mat& hsv_roi_img,cv::Mat& og_img){
         if(closest.area() == 0){
          closest=bounding_rect; 
         }
-        else if(second_closest.area() == 0){
-          second_closest = bounding_rect;
-        }
+
         else if(bounding_rect.y > closest.y){
           closest=bounding_rect; 
         }
-        else if(bounding_rect.y > second_closest.y){
-          second_closest=bounding_rect; 
-        }
 
-        std::cout << "the closest y coordinate is: " << closest.y << "and the second closest y coordinate is: " << second_closest.y << std::endl;
+
 
         //add back the cropped image height to the y coordinate
         bounding_rect.y += (int)og_img.rows*Y_START;
