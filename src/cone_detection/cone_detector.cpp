@@ -23,7 +23,7 @@ cv::Mat detect_cones(cv::Mat& img){
 
     for (int i=0; i < LEN_CONES; i++){
         cv::Mat hsv = get_hsv(roi,LOWER_BOUNDS.at(i),UPPER_BOUNDS.at(i));
-        img = find_conts(hsv,img);
+        find_conts(hsv,img);
     }
     return img;
 
@@ -45,7 +45,7 @@ cv::Mat get_hsv(cv::Mat& img,cv::Scalar lower_bounds, cv::Scalar upper_bounds){
     return mask;
 }
 
-cv::Mat find_conts(cv::Mat& hsv_roi_img,cv::Mat& og_img){
+void find_conts(cv::Mat& hsv_roi_img,cv::Mat& og_img){
     cv::Mat canny_output;
     cv::Canny(hsv_roi_img, canny_output, 50, 150 );
 
@@ -73,10 +73,10 @@ cv::Mat find_conts(cv::Mat& hsv_roi_img,cv::Mat& og_img){
         }
 
         std::cout << "the closest y coordinate is: " << closest.y << "and the second closest y coordinate is: " << second_closest.y << std::endl;
-          
+
         //add back the cropped image height to the y coordinate
         bounding_rect.y += (int)og_img.rows*Y_START;
-        cv::rectangle(og_img,bounding_rect,cv::Scalar(0,0,255),2,cv::LINE_8);
+        if(bounding_rect.area() > 40){cv::rectangle(og_img,bounding_rect,cv::Scalar(0,0,255),2,cv::LINE_8);}
         
     }
 

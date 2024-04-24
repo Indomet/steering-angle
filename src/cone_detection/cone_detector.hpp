@@ -6,6 +6,6 @@
 cv::Mat detect_cones(cv::Mat& img);
 cv::Mat get_roi(cv::Mat& img);
 cv::Mat get_hsv(cv::Mat& img,cv::Scalar lower_bounds, cv::Scalar upper_bounds);
-cv::Mat find_conts(cv::Mat& hsv_roi_img,cv::Mat& og_img);
+void find_conts(cv::Mat& hsv_roi_img,cv::Mat& og_img);
 
 #endif
