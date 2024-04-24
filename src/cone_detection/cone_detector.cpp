@@ -20,13 +20,12 @@ const std::vector <cv::Scalar> UPPER_BOUNDS = {HIGHER_BLUE,HIGHER_YELLOW};
 
 cv::Mat detect_cones(cv::Mat& img){
     cv::Mat roi = get_roi(img);
-    return roi;
-    //return get_hsv(roi,LOWER_BOUNDS.at(i),UPPER_BOUNDS.at(i));
-    /*for (int i=0; i < LEN_CONES; i++){
+
+    for (int i=0; i < LEN_CONES; i++){
         cv::Mat hsv = get_hsv(roi,LOWER_BOUNDS.at(i),UPPER_BOUNDS.at(i));
         img = find_conts(hsv,img);
     }
-    return img;*/
+    return img;
 
 }
 cv::Mat get_roi(cv::Mat& img){
@@ -53,15 +52,33 @@ cv::Mat find_conts(cv::Mat& hsv_roi_img,cv::Mat& og_img){
     std::vector<std::vector<cv::Point> > contours;
     findContours(canny_output, contours, cv::RETR_TREE, cv::CHAIN_APPROX_SIMPLE );
 
+    cv::Rect closest;
+    cv::Rect second_closest;
+
     //now we have all the contours now we need to draw them and display them
     for(size_t  i=0; i< contours.size(); i++){
+      
         cv::Rect bounding_rect = cv::boundingRect(contours[i]);
+        if(closest.area() == 0){
+         closest=bounding_rect; 
+        }
+        else if(second_closest.area() == 0){
+          second_closest = bounding_rect;
+        }
+        else if(bounding_rect.y > closest.y){
+          closest=bounding_rect; 
+        }
+        else if(bounding_rect.y > second_closest.y){
+          second_closest=bounding_rect; 
+        }
+
+        std::cout << "the closest y coordinate is: " << closest.y << "and the second closest y coordinate is: " << second_closest.y << std::endl;
+          
         //add back the cropped image height to the y coordinate
         bounding_rect.y += (int)og_img.rows*Y_START;
-
         cv::rectangle(og_img,bounding_rect,cv::Scalar(0,0,255),2,cv::LINE_8);
         
     }
-    return og_img;
-    
+
 }
+
