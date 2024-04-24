@@ -70,7 +70,7 @@ void find_conts(cv::Mat& hsv_roi_img,cv::Mat& og_img){
 
         //add back the cropped image height to the y coordinate
         bounding_rect.y += (int)og_img.rows*Y_START;
-        if(bounding_rect.area() > 40){cv::rectangle(og_img,bounding_rect,cv::Scalar(0,0,255),2,cv::LINE_8);}
+        if(bounding_rect.area() > 750){cv::rectangle(og_img,bounding_rect,cv::Scalar(0,0,255),2,cv::LINE_8);}
         
     }
 
