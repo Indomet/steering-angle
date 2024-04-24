@@ -93,12 +93,22 @@ set(LIBRARIES ${LIBRARIES} ${OpenCV_LIBS})
 
 ################################################################################
 # Create executable.
-add_executable(${PROJECT_NAME} ${CMAKE_CURRENT_SOURCE_DIR}/src/${PROJECT_NAME}.cpp)
+add_executable(${PROJECT_NAME} 
+${CMAKE_CURRENT_SOURCE_DIR}/src/${PROJECT_NAME}.cpp
+${CMAKE_CURRENT_SOURCE_DIR}/src/cone_detection/cone_detector.cpp)
+
 target_link_libraries(${PROJECT_NAME} ${LIBRARIES})
 
 # Add dependency to OpenDLV Standard Message Set.
 add_custom_target(generate_opendlv_standard_message_set_hpp DEPENDS ${CMAKE_BINARY_DIR}/opendlv-standard-message-set.hpp)
 add_dependencies(${PROJECT_NAME} generate_opendlv_standard_message_set_hpp)
+
+
+include_directories(SYSTEM ${CMAKE_BINARY_DIR})
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src/cone_detection)
+
+
 
 ################################################################################
 # Install executable.
