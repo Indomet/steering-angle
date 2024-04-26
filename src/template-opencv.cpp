@@ -22,11 +22,11 @@
 #include "opendlv-standard-message-set.hpp"
 
 // Include the GUI and image processing header files from OpenCV
+#include <cone_detection/cone_detector.hpp>
+#include <fstream>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <vector>
-#include <cone_detection/cone_detector.hpp>
-
 
 int32_t main(int32_t argc, char** argv) {
     int32_t retCode { 1 };
@@ -82,17 +82,18 @@ int32_t main(int32_t argc, char** argv) {
                     cv::Mat wrapped(HEIGHT, WIDTH, CV_8UC4, sharedMemory->data());
                     img = wrapped.clone();
                 }
-                img = detect_cones(img);
-
+                cv::Point closest = detect_cones(img);
+                std::ofstream file("output.csv", std::ios_base::app); // Open in append mode
+                if (file.is_open()) {
+                    {
+                        std::lock_guard<std::mutex> lck(gsrMutex);
+                        file << closest.x << ";" << gsr.groundSteering() << ";\n";
+                        std::cout << "main: groundSteering = " << gsr.groundSteering() << std::endl;
+                    }
+                    file.close();
+                }
                 // auto sampleTimePoint = sharedMemory->getTimeStamp();
                 sharedMemory->unlock();
-
-
-                // If you want to access the latest received ground steering, don't forget to lock the mutex:
-                {
-                    std::lock_guard<std::mutex> lck(gsrMutex);
-                    std::cout << "main: groundSteering = " << gsr.groundSteering() << std::endl;
-                }
 
                 // Display image on your screen.
                 if (VERBOSE) {
