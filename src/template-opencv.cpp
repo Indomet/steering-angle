@@ -77,22 +77,56 @@ int32_t main(int32_t argc, char** argv) {
 
                 // Lock the shared memory.
                 sharedMemory->lock();
+
                 {
                     // Copy the pixels from the shared memory into our own data structure.
                     cv::Mat wrapped(HEIGHT, WIDTH, CV_8UC4, sharedMemory->data());
                     img = wrapped.clone();
                 }
+                auto sampleTimePoint = sharedMemory->getTimeStamp(); //Get the TimeStamp from shared memory
+                int64_t timeMs = cluon::time::toMicroseconds(sampleTimePoint.second); //Get the time in microseconds from the time stamp
+                int64_t timeS = cluon::time::toMicroseconds(sampleTimePoint.second) / 1000000; //convert time in microseconds to seconds, and gets rid of the microsecond precision by rounding 
+                int64_t currentMs = timeMs - timeS*1000000; //calculates the microseconds that has passed for each second.
+                std::string currentMsStr = std::to_string(currentMs); //convert the time in microseconds to string
+                std::string timeSStr = std::to_string(timeS); // conver the time in seconds to string
+
                 cv::Point closest = detect_cones(img);
-                std::ofstream file("output.csv", std::ios_base::app); // Open in append mode
+
+                cv::Mat roi = get_roi(img);
+                cv::Point mid(roi.cols / 2, roi.rows);
+
+                //We define mid point as 0 on the X axis, left side is negative, and right is positive.
+                if(closest.x < mid.x){
+                    closest.x = closest.x * -1;
+                }else if(closest.x == mid.x){
+                    closest.x = 0;
+                }else{
+                    closest.x = closest.x - mid.x;
+                }
+
+                std::string filename = "output.csv";
+
+                // Check if file is empty
+                std::ifstream inFile(filename);
+                bool isEmpty = inFile.peek() == std::ifstream::traits_type::eof();
+                inFile.close();
+
+                // Open file in append mode
+                std::ofstream file(filename, std::ios_base::app);
+
                 if (file.is_open()) {
+                    // If file was empty, write the headers
+                    if (isEmpty) {
+                        file << "seconds;microseconds;closest_x;groundsteering\n";
+                    }
+
                     {
                         std::lock_guard<std::mutex> lck(gsrMutex);
-                        file << closest.x << ";" << gsr.groundSteering() << ";\n";
-                        std::cout << "main: groundSteering = " << gsr.groundSteering() << std::endl;
+                        file << timeSStr << ";" << currentMsStr << ";" << closest.x << ";" << gsr.groundSteering() << ";\n";
                     }
                     file.close();
                 }
-                // auto sampleTimePoint = sharedMemory->getTimeStamp();
+                
                 sharedMemory->unlock();
 
                 // Display image on your screen.
