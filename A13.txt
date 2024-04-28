@@ -9,4 +9,4 @@ docker run --rm -ti --ipc=host -e DISPLAY=$DISPLAY -v /tmp:/tmp h264decoder:v0.0
 
 docker build -f Dockerfile -t my-opencv-example .
 
-docker run --rm -ti --ipc=host -e DISPLAY=$DISPLAY -v /wsl.localhost/Ubuntu/code/learn/2024-group-02:/tmp my-opencv-example:latest --cid=253 --name=img --width=640 --height=480 --verbose 
+docker run --rm -ti --ipc=host -e DISPLAY=$DISPLAY -v /tmp:/tmp my-opencv-example:latest --cid=253 --name=img --width=640 --height=480 --verbose 
