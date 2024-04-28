@@ -29,6 +29,10 @@
 #include <vector>
 
 int32_t main(int32_t argc, char** argv) {
+    int totalFrames = 0;
+    int detected_frames = 0;
+    double detectionAccuracy = 0.0;
+
     int32_t retCode { 1 };
     // Parse the command line parameters as we require the user to specify some mandatory information on startup.
     auto commandlineArguments = cluon::getCommandlineArguments(argc, argv);
@@ -83,24 +87,32 @@ int32_t main(int32_t argc, char** argv) {
                     cv::Mat wrapped(HEIGHT, WIDTH, CV_8UC4, sharedMemory->data());
                     img = wrapped.clone();
                 }
-                auto sampleTimePoint = sharedMemory->getTimeStamp(); //Get the TimeStamp from shared memory
-                int64_t timeMs = cluon::time::toMicroseconds(sampleTimePoint.second); //Get the time in microseconds from the time stamp
-                int64_t timeS = cluon::time::toMicroseconds(sampleTimePoint.second) / 1000000; //convert time in microseconds to seconds, and gets rid of the microsecond precision by rounding 
-                int64_t currentMs = timeMs - timeS*1000000; //calculates the microseconds that has passed for each second.
-                std::string currentMsStr = std::to_string(currentMs); //convert the time in microseconds to string
+                auto sampleTimePoint = sharedMemory->getTimeStamp(); // Get the TimeStamp from shared memory
+                int64_t timeMs = cluon::time::toMicroseconds(sampleTimePoint.second); // Get the time in microseconds from the time stamp
+                int64_t timeS = cluon::time::toMicroseconds(sampleTimePoint.second) / 1000000; // convert time in microseconds to seconds, and gets rid of the microsecond precision by rounding
+                int64_t currentMs = timeMs - timeS * 1000000; // calculates the microseconds that has passed for each second.
+                std::string currentMsStr = std::to_string(currentMs); // convert the time in microseconds to string
                 std::string timeSStr = std::to_string(timeS); // conver the time in seconds to string
 
                 cv::Point closest = detect_cones(img);
+                totalFrames = totalFrames + 1;
+                if (closest.x != -1 && closest.y != -1) {
+                    detected_frames = detected_frames + 1;
+                }
+                detectionAccuracy = static_cast<double>(detected_frames) / totalFrames * 100;
+                std::cout << "total frame: " << totalFrames << "\n";
+                std::cout << "detected frames: " << detected_frames << "\n";
+                std::cout << "Detection Accuracy: " << detectionAccuracy << "%\n";
 
                 cv::Mat roi = get_roi(img);
                 cv::Point mid(roi.cols / 2, roi.rows);
 
-                //We define mid point as 0 on the X axis, left side is negative, and right is positive.
-                if(closest.x < mid.x){
+                // We define mid point as 0 on the X axis, left side is negative, and right is positive.
+                if (closest.x < mid.x) {
                     closest.x = closest.x * -1;
-                }else if(closest.x == mid.x){
+                } else if (closest.x == mid.x) {
                     closest.x = 0;
-                }else{
+                } else {
                     closest.x = closest.x - mid.x;
                 }
 
@@ -126,7 +138,7 @@ int32_t main(int32_t argc, char** argv) {
                     }
                     file.close();
                 }
-                
+
                 sharedMemory->unlock();
 
                 // Display image on your screen.
