@@ -67,6 +67,10 @@ release:
   tags:
     - docker-build
   stage: deploy
+  variables:
+    BUILDX_BUILDER: platformbuilder
+    BUILDX_PLATFORM: linux/amd64,linux/arm/v7
+    
   script:
     - docker build -f Dockerfile -t "$CI_REGISTRY_IMAGE":"$CI_COMMIT_TAG" .
     - docker buildx
@@ -75,10 +79,11 @@ release:
     - wget https://github.com/docker/buildx/releases/download/v0.7.1/buildx-v0.7.1.linux-amd64
     - mv buildx-v0.7.1.linux-amd64 docker-buildx
     - chmod 755 docker-buildx
-    - DOCKER_CLI_EXPERIMENTAL=enabled docker buildx create --name platformbuilder --use
+    - docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
+    - docker buildx create --use --driver docker-container --name $BUILDX_BUILDER --platform=${BUILDX_PLATFORM}
     - DOCKER_CLI_EXPERIMENTAL=enabled docker buildx inspect --bootstrap
     - cd -
-    - DOCKER_CLI_EXPERIMENTAL=enabled docker buildx build --platform "linux/amd64,linux/arm64,linux/arm/v7" -t "$CI_REGISTRY_IMAGE":"$CI_COMMIT_TAG" --push --provenance=false .
+    - DOCKER_CLI_EXPERIMENTAL=enabled docker buildx build --platform "linux/amd64,linux/arm64,linux/arm/v7" -t "$CI_REGISTRY_IMAGE":"$CI_COMMIT_TAG" --push .
 
   only:
     - /^v\d+\.\d+\.\d+$/
