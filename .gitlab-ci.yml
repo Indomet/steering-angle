@@ -27,13 +27,13 @@ build-and-test:
     - docker build -f Dockerfile .
     - docker buildx
     - mkdir -p ~/.docker/cli-plugins
-    - pushd ~/.docker/cli-plugins/
+    - cd ~/.docker/cli-plugins/
     - wget https://github.com/docker/buildx/releases/download/v0.7.1/buildx-v0.7.1.linux-amd64
     - mv buildx-v0.7.1.linux-amd64 docker-buildx
     - chmod 755 docker-buildx
     - DOCKER_CLI_EXPERIMENTAL=enabled docker buildx create --name platformbuilder --use
     - DOCKER_CLI_EXPERIMENTAL=enabled docker buildx inspect --bootstrap
-    - popd
+    - cd -
     - DOCKER_CLI_EXPERIMENTAL=enabled docker buildx build --platform "linux/amd64,linux/arm/v7" -t my-application -o type=local,dest=export .
     - ls export/*/lib/
     - du -sh export/*
