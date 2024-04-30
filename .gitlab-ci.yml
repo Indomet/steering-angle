@@ -33,7 +33,7 @@ build-and-test:
     - chmod 755 docker-buildx
     - DOCKER_CLI_EXPERIMENTAL=enabled docker buildx create --name platformbuilder --use
     - DOCKER_CLI_EXPERIMENTAL=enabled docker buildx inspect --bootstrap
-    - cd /courses/dit638/students/2024-group-02
+    - cd $(git rev-parse --show-toplevel)
     - DOCKER_CLI_EXPERIMENTAL=enabled docker buildx build --platform "linux/amd64,linux/arm/v7" -t my-application -o type=local,dest=export .
     - ls export/*/lib/
     - du -sh export/*
