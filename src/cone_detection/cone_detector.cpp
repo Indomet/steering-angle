@@ -16,10 +16,10 @@ const cv::Scalar HIGHER_YELLOW = cv::Scalar(39, 255, 255);
 const std::vector<cv::Scalar> LOWER_BOUNDS = { LOWER_BLUE, LOWER_YELLOW };
 const std::vector<cv::Scalar> UPPER_BOUNDS = { HIGHER_BLUE, HIGHER_YELLOW };
 
-cv::Point detect_cones(cv::Mat& img) {
+std::pair<cv::Point, cv::Point> detect_cones(cv::Mat& img) {
     cv::Mat roi = get_roi(img);
     cv::Point mid(roi.cols / 2, roi.rows);
-    std::vector<cv::Point> points;
+    std::vector<cv::Point> points(2, cv::Point(-1, -1)); // Initialize with invalid points
 
     cv::Point start(img.cols / 2, 0);
     cv::Point end(img.cols / 2, img.rows);
@@ -34,35 +34,32 @@ cv::Point detect_cones(cv::Mat& img) {
 
         cv::Point temp = find_conts(hsv, img);
         std::cout << "Closest point: (" << temp.x << ", " << temp.y << ")" << std::endl;
-        points.push_back(temp);
+        if (i == 0) { // Blue cone
+            points[0] = temp; // Left
+        } else { // Yellow cone
+            points[1] = temp; // Right
+        }
     }
 
-    
-
+    cv::Point pt(-1, -1);
+    // If no points were detected
     if ((points[0].x == -1 && points[0].y == -1) && (points[1].x == -1 && points[1].y == -1)) {
-        cv::Point pt(-1, -1);
-        return pt;
-    } else if ((points[0].x != -1 && points[0].y != -1) && (points[1].x == -1 && points[1].y == -1)) {
-
-        draw_circle(img, points[0]);
-        return points[0];
-
-    } else if ((points[0].x == -1 && points[0].y == -1) && (points[1].x != -1 && points[1].y != -1)) {
-
-        draw_circle(img, points[1]);
-        return points[1];
-
-    } else {
-        int distance1 = std::abs(mid.x - points[0].x);
-        int distance2 = std::abs(mid.x - points[1].x);
-
-        if (distance1 < distance2) {
-            draw_circle(img, points[0]);
-            return points[0];
-        } else {
-            draw_circle(img, points[1]);
-            return points[1];
-        }
+        return { pt, pt };
+    }
+    // if point 0 was detected but not 1
+    else if ((points[0].x != -1 && points[0].y != -1) && (points[1].x == -1 && points[1].y == -1)) {
+        draw_circle(img, points[0], pt);
+        return { points[0], pt };
+    }
+    // if point 1 was detected but not 0
+    else if ((points[0].x == -1 && points[0].y == -1) && (points[1].x != -1 && points[1].y != -1)) {
+        draw_circle(img, pt, points[1]);
+        return { pt, points[1] };
+    }
+    // if both points are detected
+    else {
+        draw_circle(img, points[0], points[1]);
+        return { points[0], points[1] };
     }
 }
 
@@ -113,11 +110,21 @@ cv::Point find_conts(cv::Mat& hsv_roi_img, cv::Mat& og_img) {
     return pt;
 }
 
-void draw_circle(cv::Mat& img, cv::Point pt) {
-    cv::circle(img,
-        pt,
-        25,
-        cv::Scalar(0, 255, 0),
-        cv::FILLED,
-        cv::LINE_8);
+void draw_circle(cv::Mat& img, cv::Point left, cv::Point right) {
+    if (left.x != -1) {
+        cv::circle(img,
+            left,
+            25,
+            cv::Scalar(255, 0, 0), // left is blue
+            cv::FILLED,
+            cv::LINE_8);
+    }
+    if (right.x != -1) {
+        cv::circle(img,
+            right,
+            25,
+            cv::Scalar(0, 255, 0), // right is green
+            cv::FILLED,
+            cv::LINE_8);
+    }
 }

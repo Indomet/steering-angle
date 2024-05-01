@@ -94,11 +94,16 @@ int32_t main(int32_t argc, char** argv) {
                 std::string currentMsStr = std::to_string(currentMs); // convert the time in microseconds to string
                 std::string timeSStr = std::to_string(timeS); // conver the time in seconds to string
 
-                cv::Point closest = detect_cones(img);
+                // cv::Point closest = detect_cones(img);
+                std::pair<cv::Point, cv::Point> points = detect_cones(img);
+                cv::Point left = points.first;
+                cv::Point right = points.second;
+
                 totalFrames = totalFrames + 1;
-                if (closest.x != -1 && closest.y != -1) {
+                if (left.x != -1 || right.x != -1) {
                     detected_frames = detected_frames + 1;
                 }
+
                 detectionAccuracy = static_cast<double>(detected_frames) / totalFrames * 100;
                 std::cout << "total frame: " << totalFrames << "\n";
                 std::cout << "detected frames: " << detected_frames << "\n";
@@ -108,13 +113,15 @@ int32_t main(int32_t argc, char** argv) {
                 cv::Point mid(roi.cols / 2, roi.rows);
 
                 // We define mid point as 0 on the X axis, left side is negative, and right is positive.
-                if (closest.x < mid.x) {
-                    closest.x = closest.x * -1;
-                } else if (closest.x == mid.x) {
-                    closest.x = 0;
-                } else {
-                    closest.x = closest.x - mid.x;
-                }
+                // if (closest.x < mid.x) {
+                //     closest.x = closest.x * -1;
+                // } else if (closest.x == mid.x) {
+                //     closest.x = 0;
+                // } else {
+                //     closest.x = closest.x - mid.x;
+                // }
+                int left_distance = left.x;
+                int right_distance = right.x;
 
                 std::string filename = "output.csv";
 
@@ -129,12 +136,12 @@ int32_t main(int32_t argc, char** argv) {
                 if (file.is_open()) {
                     // If file was empty, write the headers
                     if (isEmpty) {
-                        file << "seconds;microseconds;closest_x;groundsteering\n";
+                        file << "seconds;microseconds;left_x;right_x;groundsteering;\n";
                     }
 
                     {
                         std::lock_guard<std::mutex> lck(gsrMutex);
-                        file << timeSStr << ";" << currentMsStr << ";" << closest.x << ";" << gsr.groundSteering() << ";\n";
+                        file << timeSStr << ";" << currentMsStr << ";" << left_distance << ";" << right_distance << ";" << gsr.groundSteering() << ";\n";
                     }
                     file.close();
                 }
