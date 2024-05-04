@@ -19,7 +19,8 @@ const std::vector<cv::Scalar> UPPER_BOUNDS = { HIGHER_BLUE, HIGHER_YELLOW };
 std::pair<cv::Point, cv::Point> detect_cones(cv::Mat& img) {
     cv::Mat roi = get_roi(img);
     cv::Point mid(roi.cols / 2, roi.rows);
-    std::vector<cv::Point> points(2, cv::Point(-1, -1)); // Initialize with invalid points
+    std::vector<cv::Point> points(2, cv::Point(-1, -1));
+    //img = roi;
 
     cv::Point start(img.cols / 2, 0);
     cv::Point end(img.cols / 2, img.rows);
@@ -61,6 +62,8 @@ std::pair<cv::Point, cv::Point> detect_cones(cv::Mat& img) {
         draw_circle(img, points[0], points[1]);
         return { points[0], points[1] };
     }
+
+
 }
 
 cv::Mat get_roi(cv::Mat& img) {
@@ -99,9 +102,15 @@ cv::Point find_conts(cv::Mat& hsv_roi_img, cv::Mat& og_img) {
 
         // add back the cropped image height to the y coordinate
         bounding_rect.y += (int)og_img.rows * Y_START;
+        float missing_y = (float)og_img.rows * Y_START;
         if (bounding_rect.area() > 400) {
             cv::rectangle(og_img, bounding_rect, cv::Scalar(0, 0, 255), 2, cv::LINE_8);
             cv::Point pt(nearest.x + nearest.height, nearest.y + nearest.height);
+            cv::Point center(og_img.cols / 2, og_img.rows);
+            cv::Point rectangle_bottom(bounding_rect.x + bounding_rect.width / 2, bounding_rect.y + bounding_rect.height + missing_y);
+            //cv::line(og_img, center, rectangle_bottom, cv::Scalar(0,0,255), 2);
+
+
             return pt;
         }
     }

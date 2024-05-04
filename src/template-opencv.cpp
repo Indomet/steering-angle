@@ -29,9 +29,21 @@
 #include <vector>
 #include <cmath>
 
+double predict(double speed);
+
+double predict(double speed) {
+    std::vector<double> coefficients = {0.00000000e+00, 3.88192460e-03, -2.24144143e-05, -5.07314594e-07, 7.27527660e-09, 3.34496405e-11, -5.53052388e-13};
+    double result = 0.0;
+    for (int i = 0; i < coefficients.size(); i++) {
+        result += coefficients[i] * std::pow(speed, i);
+    }
+    return result;
+}
+
+
 int32_t main(int32_t argc, char** argv) {
     int totalFrames = 0;
-    int detected_frames = 0;
+    int total_correct = 0;
     double detectionAccuracy = 0.0;
 
     int32_t retCode { 1 };
@@ -63,6 +75,9 @@ int32_t main(int32_t argc, char** argv) {
 
             opendlv::proxy::GroundSteeringRequest gsr;
             std::mutex gsrMutex;
+            
+            opendlv::proxy::AngularVelocityReading vr;
+            std::mutex vMutex;
             auto onGroundSteeringRequest = [&gsr, &gsrMutex](cluon::data::Envelope&& env) {
                 // The envelope data structure provide further details, such as sampleTimePoint as shown in this test case:
                 // https://github.com/chrberger/libcluon/blob/master/libcluon/testsuites/TestEnvelopeConverter.cpp#L31-L40
@@ -71,8 +86,16 @@ int32_t main(int32_t argc, char** argv) {
                 std::cout << "lambda: groundSteering = " << gsr.groundSteering() << std::endl;
             };
 
-            od4.dataTrigger(opendlv::proxy::GroundSteeringRequest::ID(), onGroundSteeringRequest);
+            auto onVelocityRequest = [&vr, &vMutex](cluon::data::Envelope &&env)
+            {
+                // The envelope data structure provide further details, such as sampleTimePoint as shown in this test case:
+                // https://github.com/chrberger/libcluon/blob/master/libcluon/testsuites/TestEnvelopeConverter.cpp#L31-L40
+                std::lock_guard<std::mutex> lck(vMutex);
+                vr = cluon::extractMessage<opendlv::proxy::AngularVelocityReading>(std::move(env));
+            };
 
+            od4.dataTrigger(opendlv::proxy::GroundSteeringRequest::ID(), onGroundSteeringRequest);
+            od4.dataTrigger(opendlv::proxy::AngularVelocityReading::ID(), onVelocityRequest);
             // Endless loop; end the program by pressing Ctrl-C.
             while (od4.isRunning()) {
                 // OpenCV data structure to hold an image.
@@ -88,6 +111,7 @@ int32_t main(int32_t argc, char** argv) {
                     cv::Mat wrapped(HEIGHT, WIDTH, CV_8UC4, sharedMemory->data());
                     img = wrapped.clone();
                 }
+                
                 auto sampleTimePoint = sharedMemory->getTimeStamp(); // Get the TimeStamp from shared memory
                 int64_t timeMs = cluon::time::toMicroseconds(sampleTimePoint.second); // Get the time in microseconds from the time stamp
                 int64_t timeS = cluon::time::toMicroseconds(sampleTimePoint.second) / 1000000; // convert time in microseconds to seconds, and gets rid of the microsecond precision by rounding
@@ -111,40 +135,16 @@ int32_t main(int32_t argc, char** argv) {
                 
                 //Trig strategy
                 int y_bottom = img.rows;
-                double midX = mid.x; // x-coordinate of the midpoint
-                double midY = y_bottom;
-
                 int leftX = left.x;
                 int rightX = right.x;
                 std::cout << "leftY: " << left.y << " rightY: " << right.y << "\n";
-
-                if(leftX < mid.x){
-                    leftX = leftX * -1;
-                }
-                if(rightX < mid.x){
-                    rightX = rightX * -1;
-                }
 
                 int leftY = left.y;
                 int rightY = right.y;
 
                 cv::Point center(mid.x, y_bottom);
+
                 int length = 300;
-
-                // Compute the tangent of the angle
-                double right_angleRadians = atan2(rightY - midY, rightX - midX);
-                double left_angleRadians = atan2(leftY - midY, leftX - midX);
-                cv::Point leftEnd(
-                    center.x + length * cos(left_angleRadians),
-                    center.y - length * sin(left_angleRadians)
-                );
-                cv::Point rightEnd(
-                    center.x + length * cos(right_angleRadians),
-                    center.y - length * sin(right_angleRadians)
-                );
-
-                cv::line(img, center, leftEnd, cv::Scalar(255,0 , 0), 2);
-                cv::line(img, center, rightEnd, cv::Scalar(0, 255, 0), 2);
 
                 // Draw threshhold lines
                 int leftThreshholdAngle = 135;
@@ -162,31 +162,25 @@ int32_t main(int32_t argc, char** argv) {
                 cv::line(img, center, rightThreshhold, cv::Scalar(0,165,255), 2);
 
 
+               if(gsr.groundSteering() != 0 && gsr.groundSteering() !=-0){
+                totalFrames++;
+                    
+                    
+                std::lock_guard<std::mutex> lck(gsrMutex);
+                //file << timeSStr << ";" << currentMsStr << ";" << vr.angularVelocityZ() << ";" << gsr.groundSteering() << ";\n";
+                double prediction = predict(vr.angularVelocityZ());
+                double upper_bound = 1.25 * gsr.groundSteering();
+                double lower_bound = 0.75 * gsr.groundSteering();
 
+                if(gsr.groundSteering() < 0){
+                    upper_bound = 0.75 * gsr.groundSteering();
+                    lower_bound = 1.25 * gsr.groundSteering();
+                }
 
-
-
-                std::string filename = "output.csv";
-
-                // Check if file is empty
-                std::ifstream inFile(filename);
-                bool isEmpty = inFile.peek() == std::ifstream::traits_type::eof();
-                inFile.close();
-
-                // Open file in append mode
-                std::ofstream file(filename, std::ios_base::app);
-
-                if (file.is_open()) {
-                    // If file was empty, write the headers
-                    if (isEmpty) {
-                        file << "seconds;microseconds;left_x;right_x;groundsteering;\n";
-                    }
-
-                    {
-                        std::lock_guard<std::mutex> lck(gsrMutex);
-                        file << timeSStr << ";" << currentMsStr << ";" << left_distance << ";" << right_distance << ";" << gsr.groundSteering() << ";\n";
-                    }
-                    file.close();
+                if (prediction <= upper_bound && prediction >= lower_bound) {
+                                total_correct++;
+                }
+                std::cout << "Accuracy = " << total_correct << "/" << totalFrames << " = " << (double)total_correct / totalFrames << "\n";
                 }
 
                 sharedMemory->unlock();
