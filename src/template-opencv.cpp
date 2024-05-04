@@ -27,6 +27,7 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <vector>
+#include <cmath>
 
 int32_t main(int32_t argc, char** argv) {
     int totalFrames = 0;
@@ -99,29 +100,71 @@ int32_t main(int32_t argc, char** argv) {
                 cv::Point left = points.first;
                 cv::Point right = points.second;
 
-                totalFrames = totalFrames + 1;
-                if (left.x != -1 || right.x != -1) {
-                    detected_frames = detected_frames + 1;
-                }
-
-                detectionAccuracy = static_cast<double>(detected_frames) / totalFrames * 100;
-                std::cout << "total frame: " << totalFrames << "\n";
-                std::cout << "detected frames: " << detected_frames << "\n";
-                std::cout << "Detection Accuracy: " << detectionAccuracy << "%\n";
+                
 
                 cv::Mat roi = get_roi(img);
                 cv::Point mid(roi.cols / 2, roi.rows);
 
-                // We define mid point as 0 on the X axis, left side is negative, and right is positive.
-                // if (closest.x < mid.x) {
-                //     closest.x = closest.x * -1;
-                // } else if (closest.x == mid.x) {
-                //     closest.x = 0;
-                // } else {
-                //     closest.x = closest.x - mid.x;
-                // }
                 int left_distance = left.x;
                 int right_distance = right.x;
+
+                
+                //Trig strategy
+                int y_bottom = img.rows;
+                double midX = mid.x; // x-coordinate of the midpoint
+                double midY = y_bottom;
+
+                int leftX = left.x;
+                int rightX = right.x;
+                std::cout << "leftY: " << left.y << " rightY: " << right.y << "\n";
+
+                if(leftX < mid.x){
+                    leftX = leftX * -1;
+                }
+                if(rightX < mid.x){
+                    rightX = rightX * -1;
+                }
+
+                int leftY = left.y;
+                int rightY = right.y;
+
+                cv::Point center(mid.x, y_bottom);
+                int length = 300;
+
+                // Compute the tangent of the angle
+                double right_angleRadians = atan2(rightY - midY, rightX - midX);
+                double left_angleRadians = atan2(leftY - midY, leftX - midX);
+                cv::Point leftEnd(
+                    center.x + length * cos(left_angleRadians),
+                    center.y - length * sin(left_angleRadians)
+                );
+                cv::Point rightEnd(
+                    center.x + length * cos(right_angleRadians),
+                    center.y - length * sin(right_angleRadians)
+                );
+
+                cv::line(img, center, leftEnd, cv::Scalar(255,0 , 0), 2);
+                cv::line(img, center, rightEnd, cv::Scalar(0, 255, 0), 2);
+
+                // Draw threshhold lines
+                int leftThreshholdAngle = 135;
+                int rightThreshholdAngle = 45;
+                cv::Point leftThreshhold(
+                    center.x + length * cos(leftThreshholdAngle * M_PI / 180),
+                    center.y - length * sin(leftThreshholdAngle * M_PI / 180)
+                );
+                cv::Point rightThreshhold(
+                    center.x + length * cos(rightThreshholdAngle * M_PI / 180),
+                    center.y - length * sin(rightThreshholdAngle * M_PI / 180)
+                );
+
+                cv::line(img, center, leftThreshhold, cv::Scalar(0,165,255), 2);
+                cv::line(img, center, rightThreshhold, cv::Scalar(0,165,255), 2);
+
+
+
+
+
 
                 std::string filename = "output.csv";
 
