@@ -64,7 +64,7 @@ std::pair<cv::Point, cv::Point> detect_cones(cv::Mat& img) {
 }
 
 cv::Mat get_roi(cv::Mat& img) {
-    cv::Mat region(img, cv::Rect(0, (int)img.rows * Y_START, img.cols, (int)img.rows * Y_END));
+    cv::Mat region(img, cv::Rect(0, (int)(img.rows * Y_START), img.cols, (int)(img.rows * Y_END)));
     return region;
 }
 
@@ -98,7 +98,7 @@ cv::Point find_conts(cv::Mat& hsv_roi_img, cv::Mat& og_img) {
         }
 
         // add back the cropped image height to the y coordinate
-        bounding_rect.y += (int)og_img.rows * Y_START;
+        bounding_rect.y += (int)(og_img.rows * Y_START);
         if (bounding_rect.area() > 400) {
             cv::rectangle(og_img, bounding_rect, cv::Scalar(0, 0, 255), 2, cv::LINE_8);
             cv::Point pt(nearest.x + nearest.height, nearest.y + nearest.height);
@@ -114,7 +114,7 @@ void draw_circle(cv::Mat& img, cv::Point left, cv::Point right) {
     if (left.x != -1) {
         cv::circle(img,
             left,
-            25,
+            10,
             cv::Scalar(255, 0, 0), // left is blue
             cv::FILLED,
             cv::LINE_8);
@@ -122,7 +122,7 @@ void draw_circle(cv::Mat& img, cv::Point left, cv::Point right) {
     if (right.x != -1) {
         cv::circle(img,
             right,
-            25,
+            10,
             cv::Scalar(0, 255, 0), // right is green
             cv::FILLED,
             cv::LINE_8);

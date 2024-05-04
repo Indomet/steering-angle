@@ -22,17 +22,14 @@
 #include "opendlv-standard-message-set.hpp"
 
 // Include the GUI and image processing header files from OpenCV
+#include <cmath>
 #include <cone_detection/cone_detector.hpp>
 #include <fstream>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <vector>
-#include <cmath>
 
 int32_t main(int32_t argc, char** argv) {
-    int totalFrames = 0;
-    int detected_frames = 0;
-    double detectionAccuracy = 0.0;
 
     int32_t retCode { 1 };
     // Parse the command line parameters as we require the user to specify some mandatory information on startup.
@@ -96,75 +93,87 @@ int32_t main(int32_t argc, char** argv) {
                 std::string timeSStr = std::to_string(timeS); // conver the time in seconds to string
 
                 // cv::Point closest = detect_cones(img);
-                std::pair<cv::Point, cv::Point> points = detect_cones(img);
-                cv::Point left = points.first;
-                cv::Point right = points.second;
 
-                
+                std::pair<cv::Point, cv::Point> points = detect_cones(img);
+                // points.first is the blue cone, points.second is the yellow cone
+                cv::Point left = points.second;
+                cv::Point right = points.first;
 
                 cv::Mat roi = get_roi(img);
                 cv::Point mid(roi.cols / 2, roi.rows);
 
-                int left_distance = left.x;
-                int right_distance = right.x;
+                int left_distance = std::abs(left.x - mid.x);
+                int right_distance = std::abs(right.x - mid.x);
 
-                
-                //Trig strategy
+                // Trig strategy
                 int y_bottom = img.rows;
-                double midX = mid.x; // x-coordinate of the midpoint
-                double midY = y_bottom;
 
-                int leftX = left.x;
+                int leftX = img.cols - left.x; // flip the x-coordinates
                 int rightX = right.x;
                 std::cout << "leftY: " << left.y << " rightY: " << right.y << "\n";
 
-                if(leftX < mid.x){
-                    leftX = leftX * -1;
-                }
-                if(rightX < mid.x){
-                    rightX = rightX * -1;
-                }
-
-                int leftY = left.y;
-                int rightY = right.y;
+                // if (leftX < mid.x) {
+                //     leftX = leftX * -1;
+                // }
+                // if (rightX < mid.x) {
+                //     rightX = rightX * -1;
+                // }
 
                 cv::Point center(mid.x, y_bottom);
+
+                int leftY = center.y - left.y; // Negate the y-coordinates
+                int rightY = center.y - right.y; // Negate the y-coordinates
+
                 int length = 300;
 
                 // Compute the tangent of the angle
-                double right_angleRadians = atan2(rightY - midY, rightX - midX);
-                double left_angleRadians = atan2(leftY - midY, leftX - midX);
-                cv::Point leftEnd(
-                    center.x + length * cos(left_angleRadians),
-                    center.y - length * sin(left_angleRadians)
-                );
-                cv::Point rightEnd(
-                    center.x + length * cos(right_angleRadians),
-                    center.y - length * sin(right_angleRadians)
-                );
+                double right_angleRadians = atan2(rightY, rightX);
+                double left_angleRadians = atan2(leftY, leftX);
 
-                cv::line(img, center, leftEnd, cv::Scalar(255,0 , 0), 2);
+                cv::Point leftEnd(
+                    static_cast<int>(center.x + length * cos(left_angleRadians)),
+                    static_cast<int>(center.y - length * sin(left_angleRadians)));
+                cv::Point rightEnd(
+                    static_cast<int>(center.x + length * cos(right_angleRadians)),
+                    static_cast<int>(center.y - length * sin(right_angleRadians)));
+
+                leftEnd.x = img.cols - leftEnd.x;
+                // cv::line(img, center, leftEnd, cv::Scalar(255, 0, 0), 2);
+                cv::line(img, center, leftEnd, cv::Scalar(0, 0, 255), 2);
                 cv::line(img, center, rightEnd, cv::Scalar(0, 255, 0), 2);
 
                 // Draw threshhold lines
-                int leftThreshholdAngle = 135;
-                int rightThreshholdAngle = 45;
+                int threshold = 50;
+                int leftThreshholdAngle = 90 + threshold;
+                int rightThreshholdAngle = 90 - threshold;
+                double leftThreshholdAngleRadians = leftThreshholdAngle * M_PI / 180;
+                double rightThreshholdAngleRadians = rightThreshholdAngle * M_PI / 180;
                 cv::Point leftThreshhold(
-                    center.x + length * cos(leftThreshholdAngle * M_PI / 180),
-                    center.y - length * sin(leftThreshholdAngle * M_PI / 180)
-                );
+                    static_cast<int>(center.x + length * cos(leftThreshholdAngleRadians)),
+                    static_cast<int>(center.y - length * sin(leftThreshholdAngleRadians)));
                 cv::Point rightThreshhold(
-                    center.x + length * cos(rightThreshholdAngle * M_PI / 180),
-                    center.y - length * sin(rightThreshholdAngle * M_PI / 180)
-                );
+                    static_cast<int>(center.x + length * cos(rightThreshholdAngleRadians)),
+                    static_cast<int>(center.y - length * sin(rightThreshholdAngleRadians)));
 
-                cv::line(img, center, leftThreshhold, cv::Scalar(0,165,255), 2);
-                cv::line(img, center, rightThreshhold, cv::Scalar(0,165,255), 2);
+                cv::line(img, center, leftThreshhold, cv::Scalar(0, 165, 255), 2);
+                cv::line(img, center, rightThreshhold, cv::Scalar(0, 165, 255), 2);
 
+                std::cout << "Left angle: " << left_angleRadians << " Right angle: " << right_angleRadians << "\n";
+                std::cout << "Left threshold: " << leftThreshholdAngleRadians << " Right threshold: " << rightThreshholdAngleRadians << "\n";
 
+                bool shouldTurnLeft = right.x != -1 && right_angleRadians >= rightThreshholdAngleRadians;
+                bool shouldTurnRight = left.x != -1 && M_PI - left_angleRadians <= leftThreshholdAngleRadians;
 
-
-
+                if (shouldTurnLeft && shouldTurnRight) {
+                    // Both conditions are met, decide what to do (e.g., stop, go straight, choose based on which angle is larger, etc.)
+                    cv::putText(img, "Decision Needed", cv::Point(center.x - 50, 50), cv::FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(0, 0, 255), 2);
+                } else if (shouldTurnLeft) {
+                    cv::putText(img, "Turn Left", cv::Point(50, 50), cv::FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(0, 0, 255), 2);
+                } else if (shouldTurnRight) {
+                    cv::putText(img, "Turn Right", cv::Point(300, 50), cv::FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(0, 0, 255), 2);
+                } else {
+                    cv::putText(img, "Go Straight", cv::Point(center.x - 50, 50), cv::FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(0, 0, 255), 2);
+                }
 
                 std::string filename = "output.csv";
 
