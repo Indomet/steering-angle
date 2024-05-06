@@ -22,24 +22,23 @@
 #include "opendlv-standard-message-set.hpp"
 
 // Include the GUI and image processing header files from OpenCV
+#include <cmath>
 #include <cone_detection/cone_detector.hpp>
 #include <fstream>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <vector>
-#include <cmath>
 
 double predict(double speed);
 
 double predict(double speed) {
-    std::vector<double> coefficients = {0.00000000e+00, 3.88192460e-03, -2.24144143e-05, -5.07314594e-07, 7.27527660e-09, 3.34496405e-11, -5.53052388e-13};
+    std::vector<double> coefficients = { 0.00000000e+00, 3.88192460e-03, -2.24144143e-05, -5.07314594e-07, 7.27527660e-09, 3.34496405e-11, -5.53052388e-13 };
     double result = 0.0;
     for (int i = 0; i < coefficients.size(); i++) {
         result += coefficients[i] * std::pow(speed, i);
     }
     return result;
 }
-
 
 int32_t main(int32_t argc, char** argv) {
     int totalFrames = 0;
@@ -75,7 +74,7 @@ int32_t main(int32_t argc, char** argv) {
 
             opendlv::proxy::GroundSteeringRequest gsr;
             std::mutex gsrMutex;
-            
+
             opendlv::proxy::AngularVelocityReading vr;
             std::mutex vMutex;
             auto onGroundSteeringRequest = [&gsr, &gsrMutex](cluon::data::Envelope&& env) {
@@ -83,11 +82,10 @@ int32_t main(int32_t argc, char** argv) {
                 // https://github.com/chrberger/libcluon/blob/master/libcluon/testsuites/TestEnvelopeConverter.cpp#L31-L40
                 std::lock_guard<std::mutex> lck(gsrMutex);
                 gsr = cluon::extractMessage<opendlv::proxy::GroundSteeringRequest>(std::move(env));
-                std::cout << "lambda: groundSteering = " << gsr.groundSteering() << std::endl;
+                // std::cout << "lambda: groundSteering = " << gsr.groundSteering() << std::endl;
             };
 
-            auto onVelocityRequest = [&vr, &vMutex](cluon::data::Envelope &&env)
-            {
+            auto onVelocityRequest = [&vr, &vMutex](cluon::data::Envelope&& env) {
                 // The envelope data structure provide further details, such as sampleTimePoint as shown in this test case:
                 // https://github.com/chrberger/libcluon/blob/master/libcluon/testsuites/TestEnvelopeConverter.cpp#L31-L40
                 std::lock_guard<std::mutex> lck(vMutex);
@@ -111,76 +109,30 @@ int32_t main(int32_t argc, char** argv) {
                     cv::Mat wrapped(HEIGHT, WIDTH, CV_8UC4, sharedMemory->data());
                     img = wrapped.clone();
                 }
-                
+
                 auto sampleTimePoint = sharedMemory->getTimeStamp(); // Get the TimeStamp from shared memory
                 int64_t timeMs = cluon::time::toMicroseconds(sampleTimePoint.second); // Get the time in microseconds from the time stamp
-                int64_t timeS = cluon::time::toMicroseconds(sampleTimePoint.second) / 1000000; // convert time in microseconds to seconds, and gets rid of the microsecond precision by rounding
-                int64_t currentMs = timeMs - timeS * 1000000; // calculates the microseconds that has passed for each second.
-                std::string currentMsStr = std::to_string(currentMs); // convert the time in microseconds to string
-                std::string timeSStr = std::to_string(timeS); // conver the time in seconds to string
 
-                // cv::Point closest = detect_cones(img);
-                std::pair<cv::Point, cv::Point> points = detect_cones(img);
-                cv::Point left = points.first;
-                cv::Point right = points.second;
+                if (gsr.groundSteering() != 0 && gsr.groundSteering() != -0) {
+                    totalFrames++;
 
-                
+                    std::lock_guard<std::mutex> lck(gsrMutex);
+                    double prediction = predict(vr.angularVelocityZ());
+                    double upper_bound = 1.25 * gsr.groundSteering();
+                    double lower_bound = 0.75 * gsr.groundSteering();
 
-                cv::Mat roi = get_roi(img);
-                cv::Point mid(roi.cols / 2, roi.rows);
+                    if (gsr.groundSteering() < 0) {
+                        upper_bound = 0.75 * gsr.groundSteering();
+                        lower_bound = 1.25 * gsr.groundSteering();
+                    }
 
-                int left_distance = left.x;
-                int right_distance = right.x;
+                    if (prediction <= upper_bound && prediction >= lower_bound) {
+                        total_correct++;
+                    }
 
-                
-                //Trig strategy
-                int y_bottom = img.rows;
-                int leftX = left.x;
-                int rightX = right.x;
-                std::cout << "leftY: " << left.y << " rightY: " << right.y << "\n";
+                    // std::cout << "Accuracy = " << total_correct << "/" << totalFrames << " = " << (double)total_correct / totalFrames << "\n";
 
-                int leftY = left.y;
-                int rightY = right.y;
-
-                cv::Point center(mid.x, y_bottom);
-
-                int length = 300;
-
-                // Draw threshhold lines
-                int leftThreshholdAngle = 135;
-                int rightThreshholdAngle = 45;
-                cv::Point leftThreshhold(
-                    center.x + length * cos(leftThreshholdAngle * M_PI / 180),
-                    center.y - length * sin(leftThreshholdAngle * M_PI / 180)
-                );
-                cv::Point rightThreshhold(
-                    center.x + length * cos(rightThreshholdAngle * M_PI / 180),
-                    center.y - length * sin(rightThreshholdAngle * M_PI / 180)
-                );
-
-                cv::line(img, center, leftThreshhold, cv::Scalar(0,165,255), 2);
-                cv::line(img, center, rightThreshhold, cv::Scalar(0,165,255), 2);
-
-
-               if(gsr.groundSteering() != 0 && gsr.groundSteering() !=-0){
-                totalFrames++;
-                    
-                    
-                std::lock_guard<std::mutex> lck(gsrMutex);
-                //file << timeSStr << ";" << currentMsStr << ";" << vr.angularVelocityZ() << ";" << gsr.groundSteering() << ";\n";
-                double prediction = predict(vr.angularVelocityZ());
-                double upper_bound = 1.25 * gsr.groundSteering();
-                double lower_bound = 0.75 * gsr.groundSteering();
-
-                if(gsr.groundSteering() < 0){
-                    upper_bound = 0.75 * gsr.groundSteering();
-                    lower_bound = 1.25 * gsr.groundSteering();
-                }
-
-                if (prediction <= upper_bound && prediction >= lower_bound) {
-                                total_correct++;
-                }
-                std::cout << "Accuracy = " << total_correct << "/" << totalFrames << " = " << (double)total_correct / totalFrames << "\n";
+                    std::cout << "group_02;" << timeMs << ";" << prediction << std::endl;
                 }
 
                 sharedMemory->unlock();
