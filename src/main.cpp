@@ -28,8 +28,7 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <vector>
-
-double predict(double speed);
+#include "main.hpp"
 
 double predict(double speed) {
     std::vector<double> coefficients = { 0.00000000e+00, 3.88192460e-03, -2.24144143e-05, -5.07314594e-07, 7.27527660e-09, 3.34496405e-11, -5.53052388e-13 };
