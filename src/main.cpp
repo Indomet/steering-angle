@@ -30,13 +30,16 @@
 #include <vector>
 #include "main.hpp"
 
+
+
 double predict(double speed) {
-    std::vector<double> coefficients = { 0.00000000e+00, 3.88192460e-03, -2.24144143e-05, -5.07314594e-07, 7.27527660e-09, 3.34496405e-11, -5.53052388e-13 };
-    double result = 0.0;
+    std::vector<double> coefficients = {0.00000000e+00, 3.96583242e-03, -1.05373477e-04, -3.17407267e-07, 4.68268257e-08, -1.49984238e-10, -5.54462195e-12, 3.47391935e-14};
+    double intercept = 0.05159669059756054;
+    double prediction = intercept;
     for (int i = 0; i < coefficients.size(); i++) {
-        result += coefficients[i] * std::pow(speed, i);
+        prediction += coefficients[i] * std::pow(speed, i);
     }
-    return result;
+    return prediction;
 }
 
 int32_t main(int32_t argc, char** argv) {

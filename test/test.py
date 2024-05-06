@@ -5,15 +5,25 @@ import pandas as pd
 class Test_accuracy(unittest.TestCase):
     
     def predict(self,speed):
-        coefficients = np.array([0.00000000e+00, 3.88192460e-03, -2.24144143e-05, -5.07314594e-07, 7.27527660e-09, 3.34496405e-11, -5.53052388e-13])
+        coefficients = np.array([0.00000000e+00, 3.96583242e-03, -1.05373477e-04, -3.17407267e-07, 4.68268257e-08, -1.49984238e-10, -5.54462195e-12, 3.47391935e-14])
+        intercept = 0.05159669059756054
         powers = np.array([i for i in range(len(coefficients))])
-        return np.sum(coefficients * speed ** powers)
+        return intercept + np.sum(coefficients * speed ** powers)
     
-    def test_accuracy(self):
-        paths = ['./data/data.csv','./data/fifth_rec.csv','./data/fourth_rec.csv','./data/third_rec.csv']
-        for path in paths:
-            self.assertTrue(self.get_accuracy(path) >= 0.25)
-    
+    def test_first_rec_accuracy(self):
+        self.assertTrue(self.get_accuracy('./data/first_rec.csv') >= 0.25)
+
+    def test_second_rec_accuracy(self):
+        self.assertTrue(self.get_accuracy('./data/second_rec.csv') >= 0.25)
+
+    def test_third_rec_accuracy(self):
+        self.assertTrue(self.get_accuracy('./data/third_rec.csv') >= 0.25)
+
+    def test_fourth_rec_accuracy(self):
+        self.assertTrue(self.get_accuracy('./data/fourth_rec.csv') >= 0.25)
+
+    def test_fifth_rec_accuracy(self):
+        self.assertTrue(self.get_accuracy('./data/fifth_rec.csv') >= 0.25)
     def get_accuracy(self,path):
         df = pd.read_csv(filepath_or_buffer=path,delimiter=';')
         speeds = df['speed']
