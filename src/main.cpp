@@ -22,13 +22,29 @@
 #include "opendlv-standard-message-set.hpp"
 
 // Include the GUI and image processing header files from OpenCV
+#include <cmath>
+#include <cone_detection/cone_detector.hpp>
+#include <fstream>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <vector>
-#include <cone_detection/cone_detector.hpp>
 
+double predict(double speed);
+
+double predict(double speed) {
+    std::vector<double> coefficients = { 0.00000000e+00, 3.88192460e-03, -2.24144143e-05, -5.07314594e-07, 7.27527660e-09, 3.34496405e-11, -5.53052388e-13 };
+    double result = 0.0;
+    for (int i = 0; i < coefficients.size(); i++) {
+        result += coefficients[i] * std::pow(speed, i);
+    }
+    return result;
+}
 
 int32_t main(int32_t argc, char** argv) {
+    int totalFrames = 0;
+    int total_correct = 0;
+    double detectionAccuracy = 0.0;
+
     int32_t retCode { 1 };
     // Parse the command line parameters as we require the user to specify some mandatory information on startup.
     auto commandlineArguments = cluon::getCommandlineArguments(argc, argv);
@@ -58,16 +74,26 @@ int32_t main(int32_t argc, char** argv) {
 
             opendlv::proxy::GroundSteeringRequest gsr;
             std::mutex gsrMutex;
+
+            opendlv::proxy::AngularVelocityReading vr;
+            std::mutex vMutex;
             auto onGroundSteeringRequest = [&gsr, &gsrMutex](cluon::data::Envelope&& env) {
                 // The envelope data structure provide further details, such as sampleTimePoint as shown in this test case:
                 // https://github.com/chrberger/libcluon/blob/master/libcluon/testsuites/TestEnvelopeConverter.cpp#L31-L40
                 std::lock_guard<std::mutex> lck(gsrMutex);
                 gsr = cluon::extractMessage<opendlv::proxy::GroundSteeringRequest>(std::move(env));
-                std::cout << "lambda: groundSteering = " << gsr.groundSteering() << std::endl;
+                // std::cout << "lambda: groundSteering = " << gsr.groundSteering() << std::endl;
+            };
+
+            auto onVelocityRequest = [&vr, &vMutex](cluon::data::Envelope&& env) {
+                // The envelope data structure provide further details, such as sampleTimePoint as shown in this test case:
+                // https://github.com/chrberger/libcluon/blob/master/libcluon/testsuites/TestEnvelopeConverter.cpp#L31-L40
+                std::lock_guard<std::mutex> lck(vMutex);
+                vr = cluon::extractMessage<opendlv::proxy::AngularVelocityReading>(std::move(env));
             };
 
             od4.dataTrigger(opendlv::proxy::GroundSteeringRequest::ID(), onGroundSteeringRequest);
-
+            od4.dataTrigger(opendlv::proxy::AngularVelocityReading::ID(), onVelocityRequest);
             // Endless loop; end the program by pressing Ctrl-C.
             while (od4.isRunning()) {
                 // OpenCV data structure to hold an image.
@@ -77,22 +103,39 @@ int32_t main(int32_t argc, char** argv) {
 
                 // Lock the shared memory.
                 sharedMemory->lock();
+
                 {
                     // Copy the pixels from the shared memory into our own data structure.
                     cv::Mat wrapped(HEIGHT, WIDTH, CV_8UC4, sharedMemory->data());
                     img = wrapped.clone();
                 }
-                img = detect_cones(img);
 
-                // auto sampleTimePoint = sharedMemory->getTimeStamp();
-                sharedMemory->unlock();
+                auto sampleTimePoint = sharedMemory->getTimeStamp(); // Get the TimeStamp from shared memory
+                int64_t timeMs = cluon::time::toMicroseconds(sampleTimePoint.second); // Get the time in microseconds from the time stamp
 
+                if (gsr.groundSteering() != 0 && gsr.groundSteering() != -0) {
+                    totalFrames++;
 
-                // If you want to access the latest received ground steering, don't forget to lock the mutex:
-                {
                     std::lock_guard<std::mutex> lck(gsrMutex);
-                    std::cout << "main: groundSteering = " << gsr.groundSteering() << std::endl;
+                    double prediction = predict(vr.angularVelocityZ());
+                    double upper_bound = 1.25 * gsr.groundSteering();
+                    double lower_bound = 0.75 * gsr.groundSteering();
+
+                    if (gsr.groundSteering() < 0) {
+                        upper_bound = 0.75 * gsr.groundSteering();
+                        lower_bound = 1.25 * gsr.groundSteering();
+                    }
+
+                    if (prediction <= upper_bound && prediction >= lower_bound) {
+                        total_correct++;
+                    }
+
+                    // std::cout << "Accuracy = " << total_correct << "/" << totalFrames << " = " << (double)total_correct / totalFrames << "\n";
+
+                    std::cout << "group_02;" << timeMs << ";" << prediction << std::endl;
                 }
+
+                sharedMemory->unlock();
 
                 // Display image on your screen.
                 if (VERBOSE) {
