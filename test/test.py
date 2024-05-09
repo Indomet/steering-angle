@@ -17,6 +17,7 @@ class Test_accuracy(unittest.TestCase):
         total = 0
         total_correct=0
         for speed,angle in zip(speeds,ground_steerings):
+            
             if(angle==0 or angle==-0):
                 continue
             
@@ -31,7 +32,9 @@ class Test_accuracy(unittest.TestCase):
             
             if prediction >= lower_bound and prediction <= upper_bound:
                 total_correct+=1
-        return total_correct/total
+        accuracy = total_correct/total
+        print(f"The accuracy for recording : {path} is {accuracy}")
+        return accuracy
     
     def test_accuracy(self):
         paths = ['./data/first_rec.csv','./data/second_rec.csv','./data/third_rec.csv','./data/fourth_rec.csv','./data/fifth_rec.csv']

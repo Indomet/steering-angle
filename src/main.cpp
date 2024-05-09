@@ -76,24 +76,19 @@ int32_t main(int32_t argc, char** argv) {
 
             opendlv::proxy::GroundSteeringRequest gsr;
             std::mutex gsrMutex;
-
             opendlv::proxy::AngularVelocityReading vr;
             std::mutex vMutex;
             auto onGroundSteeringRequest = [&gsr, &gsrMutex](cluon::data::Envelope&& env) {
-                // The envelope data structure provide further details, such as sampleTimePoint as shown in this test case:
-                // https://github.com/chrberger/libcluon/blob/master/libcluon/testsuites/TestEnvelopeConverter.cpp#L31-L40
                 std::lock_guard<std::mutex> lck(gsrMutex);
                 gsr = cluon::extractMessage<opendlv::proxy::GroundSteeringRequest>(std::move(env));
-                // std::cout << "lambda: groundSteering = " << gsr.groundSteering() << std::endl;
+                std::cout << "onGroundSteeringRequest triggered. groundSteering = " << gsr.groundSteering() << std::endl;
             };
-
+            od4.dataTrigger(opendlv::proxy::GroundSteeringRequest::ID(), onGroundSteeringRequest);
             auto onVelocityRequest = [&vr, &vMutex](cluon::data::Envelope&& env) {
-                // The envelope data structure provide further details, such as sampleTimePoint as shown in this test case:
-                // https://github.com/chrberger/libcluon/blob/master/libcluon/testsuites/TestEnvelopeConverter.cpp#L31-L40
                 std::lock_guard<std::mutex> lck(vMutex);
                 vr = cluon::extractMessage<opendlv::proxy::AngularVelocityReading>(std::move(env));
+                std::cout << "onVelocityRequest triggered. angularVelocityZ = " << vr.angularVelocityZ() << std::endl;
             };
-
             od4.dataTrigger(opendlv::proxy::GroundSteeringRequest::ID(), onGroundSteeringRequest);
             od4.dataTrigger(opendlv::proxy::AngularVelocityReading::ID(), onVelocityRequest);
             // Endless loop; end the program by pressing Ctrl-C.
@@ -114,12 +109,12 @@ int32_t main(int32_t argc, char** argv) {
 
                 auto sampleTimePoint = sharedMemory->getTimeStamp(); // Get the TimeStamp from shared memory
                 int64_t timeMs = cluon::time::toMicroseconds(sampleTimePoint.second); // Get the time in microseconds from the time stamp
-
+                double prediction = 0.0;
                 if (gsr.groundSteering() != 0 && gsr.groundSteering() != -0) {
                     totalFrames++;
 
                     std::lock_guard<std::mutex> lck(gsrMutex);
-                    double prediction = predict(vr.angularVelocityZ());
+                    prediction = predict(vr.angularVelocityZ());
                     double upper_bound = 1.25 * gsr.groundSteering();
                     double lower_bound = 0.75 * gsr.groundSteering();
 
@@ -136,6 +131,30 @@ int32_t main(int32_t argc, char** argv) {
 
                     std::cout << "group_02;" << timeMs << ";" << prediction << std::endl;
                 }
+
+                std::string filename = "output.csv";
+
+                // Check if file is empty
+                std::ifstream inFile(filename);
+                bool isEmpty = inFile.peek() == std::ifstream::traits_type::eof();
+                inFile.close();
+
+                // Open file in append mode
+                std::ofstream file(filename, std::ios_base::app);
+
+                if (file.is_open()) {
+                    // If file was empty, write the headers
+                    if (isEmpty) {
+                        file << "microseconds;speed;groundsteering;prediction;\n";
+                    }
+                    {
+                        std::lock_guard<std::mutex> lck1(gsrMutex);
+                        std::lock_guard<std::mutex> lck2(vMutex);
+                        file << timeMs << ";" << vr.angularVelocityZ() << ";" << gsr.groundSteering() << ";" << prediction << ";\n";
+                    }
+                    file.close();
+                }
+    
 
                 sharedMemory->unlock();
 

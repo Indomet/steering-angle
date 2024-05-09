@@ -25,6 +25,7 @@
     WORKDIR /opt/sources
     COPY . .
     RUN python3 -m unittest discover -s test
+    RUN python3 test/test.py
 
     RUN mkdir build && \
         cd build && \
