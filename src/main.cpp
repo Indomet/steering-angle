@@ -29,6 +29,7 @@
 #include <opencv2/imgproc/imgproc.hpp>
 #include <vector>
 #include "main.hpp"
+#include <string>
 
 
 
@@ -81,13 +82,13 @@ int32_t main(int32_t argc, char** argv) {
             auto onGroundSteeringRequest = [&gsr, &gsrMutex](cluon::data::Envelope&& env) {
                 std::lock_guard<std::mutex> lck(gsrMutex);
                 gsr = cluon::extractMessage<opendlv::proxy::GroundSteeringRequest>(std::move(env));
-                std::cout << "onGroundSteeringRequest triggered. groundSteering = " << gsr.groundSteering() << std::endl;
+                //std::cout << "onGroundSteeringRequest triggered. groundSteering = " << gsr.groundSteering() << std::endl;
             };
             od4.dataTrigger(opendlv::proxy::GroundSteeringRequest::ID(), onGroundSteeringRequest);
             auto onVelocityRequest = [&vr, &vMutex](cluon::data::Envelope&& env) {
                 std::lock_guard<std::mutex> lck(vMutex);
                 vr = cluon::extractMessage<opendlv::proxy::AngularVelocityReading>(std::move(env));
-                std::cout << "onVelocityRequest triggered. angularVelocityZ = " << vr.angularVelocityZ() << std::endl;
+                //std::cout << "onVelocityRequest triggered. angularVelocityZ = " << vr.angularVelocityZ() << std::endl;
             };
             od4.dataTrigger(opendlv::proxy::GroundSteeringRequest::ID(), onGroundSteeringRequest);
             od4.dataTrigger(opendlv::proxy::AngularVelocityReading::ID(), onVelocityRequest);
@@ -109,12 +110,12 @@ int32_t main(int32_t argc, char** argv) {
 
                 auto sampleTimePoint = sharedMemory->getTimeStamp(); // Get the TimeStamp from shared memory
                 int64_t timeMs = cluon::time::toMicroseconds(sampleTimePoint.second); // Get the time in microseconds from the time stamp
-                double prediction = 0.0;
+                double prediction = predict(vr.angularVelocityZ());
                 if (gsr.groundSteering() != 0 && gsr.groundSteering() != -0) {
                     totalFrames++;
 
                     std::lock_guard<std::mutex> lck(gsrMutex);
-                    prediction = predict(vr.angularVelocityZ());
+                    
                     double upper_bound = 1.25 * gsr.groundSteering();
                     double lower_bound = 0.75 * gsr.groundSteering();
 
@@ -127,39 +128,29 @@ int32_t main(int32_t argc, char** argv) {
                         total_correct++;
                     }
 
-                    // std::cout << "Accuracy = " << total_correct << "/" << totalFrames << " = " << (double)total_correct / totalFrames << "\n";
+                    std::cout << "Accuracy = " << total_correct << "/" << totalFrames << " = " << (double)total_correct / totalFrames << "\n";
 
-                    std::cout << "group_02;" << timeMs << ";" << prediction << std::endl;
+                    
                 }
-
-                std::string filename = "output.csv";
-
-                // Check if file is empty
-                std::ifstream inFile(filename);
-                bool isEmpty = inFile.peek() == std::ifstream::traits_type::eof();
-                inFile.close();
-
-                // Open file in append mode
-                std::ofstream file(filename, std::ios_base::app);
-
-                if (file.is_open()) {
-                    // If file was empty, write the headers
-                    if (isEmpty) {
-                        file << "microseconds;speed;groundsteering;prediction;\n";
-                    }
-                    {
-                        std::lock_guard<std::mutex> lck1(gsrMutex);
-                        std::lock_guard<std::mutex> lck2(vMutex);
-                        file << timeMs << ";" << vr.angularVelocityZ() << ";" << gsr.groundSteering() << ";" << prediction << ";\n";
-                    }
-                    file.close();
-                }
+                std::cout << "group_02;" << timeMs << ";" << prediction << std::endl;
+                
     
 
                 sharedMemory->unlock();
 
                 // Display image on your screen.
                 if (VERBOSE) {
+
+                    std::string text = "Speed: " + std::to_string(vr.angularVelocityZ()) + " Predicted angle: " + std::to_string(prediction);
+                    cv::Point textPosition(10, 30);  
+
+                    // display the text on the image
+                    int fontFace = cv::FONT_HERSHEY_SIMPLEX;
+                    double fontScale = 0.5;
+                    cv::Scalar textColor(0, 0, 255);  // red text
+                    cv::putText(img, text, textPosition, fontFace, fontScale, textColor);
+
+                    // show the image
                     cv::imshow(sharedMemory->name().c_str(), img);
                     cv::waitKey(1);
                 }
