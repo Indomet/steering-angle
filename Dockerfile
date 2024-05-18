@@ -51,7 +51,8 @@ RUN apt-get install -y --no-install-recommends \
 
 # Install Python packages
 RUN pip3 install cython
-RUN pip3 install numpy pandas
+RUN pip3 install numpy
+RUN pip3 install pandas
 
 WORKDIR /usr/bin
 COPY --from=builder /tmp/bin/main .
