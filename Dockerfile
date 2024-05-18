@@ -1,7 +1,7 @@
 # First stage for building the software:
 FROM ubuntu:18.04 as builder
 
-ENV DEBIAN_FRONTEND noninteractive
+ENV DEBIAN_FRONTEND=noninteractive
 
 # Upgrade the Ubuntu 18.04 LTS base image
 RUN apt-get update -y && \
@@ -19,8 +19,11 @@ RUN apt-get install -y --no-install-recommends \
     python3-setuptools \
     cython
 
+# Ensure pip is updated
+RUN pip3 install --upgrade pip
+
 # Install Python packages
-RUN pip3 install numpy pandas
+RUN pip3 install cython numpy pandas
 
 # Include this source tree and compile the sources
 ADD . /opt/sources
@@ -34,7 +37,7 @@ RUN mkdir build && \
 # Second stage for packaging the software into a software bundle:
 FROM ubuntu:18.04
 
-ENV DEBIAN_FRONTEND noninteractive
+ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update -y && \
     apt-get upgrade -y && \
@@ -49,10 +52,11 @@ RUN apt-get install -y --no-install-recommends \
     python3-setuptools \
     cython
 
+# Ensure pip is updated
+RUN pip3 install --upgrade pip
+
 # Install Python packages
-RUN pip3 install cython
-RUN pip3 install numpy
-RUN pip3 install pandas
+RUN pip3 install cython numpy pandas
 
 WORKDIR /usr/bin
 COPY --from=builder /tmp/bin/main .
