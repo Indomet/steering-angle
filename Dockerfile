@@ -40,7 +40,8 @@
         libopencv-highgui3.2 \
         libopencv-imgproc3.2 \
         python3 \
-        python3-pip
+        python3-pip \
+        python3-setuptools
     
     RUN pip3 install numpy pandas
         # Include this source tree and compile the sources
